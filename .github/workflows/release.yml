@@ -56,11 +56,13 @@ jobs:
       - name: Package
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk     out/aniforge-${{ steps.tag.outputs.tag }}.apk
-          cp app/build/outputs/apk/debug/app-debug.apk         out/aniforge-${{ steps.tag.outputs.tag }}-debug.apk
-          cp dist/forge-console-linux-x64                      out/
-          cp examples/demo.osp                                 out/
-          cp examples/ops.demo.json                            out/
+          APK=app/build/outputs/apk/release/app-release.apk
+          [ -f "$APK" ] || APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          cp "$APK" out/aniforge-${{ steps.tag.outputs.tag }}.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/aniforge-${{ steps.tag.outputs.tag }}-debug.apk
+          cp dist/forge-console-linux-x64 out/
+          cp examples/demo.osp out/
+          cp examples/ops.demo.json out/
 
       - name: Create release
         env:

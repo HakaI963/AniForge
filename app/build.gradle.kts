@@ -20,6 +20,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // v0.1.x ships installable builds: debug-signed release APKs.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
