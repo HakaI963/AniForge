@@ -64,8 +64,11 @@ def test_speed_keyframe_ramp() -> None:
     _, _ = Ops.speed(p, "c1", 1.0, ramp=[(1.0, 4.0), (2.0, 0.5)])
     assert "speed" in c.keyframes
     kf = c.keyframes["speed"]
-    v0, v1 = kf.sample(24), kf.sample(48)
-    assert v0 > v1  # decelerating ramp
+    # ramp [(t=1.0,s=4.0),(t=2.0,s=0.5)] maps to clip frames [(36,4.0),(60,0.5)]
+    v0 = kf.sample(24)        # at/after first point → holds 4.0
+    v1 = kf.sample(48)        # mid transition
+    assert v0 > v1            # decelerating ramp
+    assert abs(kf.sample(60) - 0.5) < 1e-6
 
 
 def test_overlap_detection() -> None:

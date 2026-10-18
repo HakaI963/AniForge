@@ -29,17 +29,16 @@ app.add_middleware(
 )
 
 # --------------------------------------------------------------- live events
+import threading as _threading
 _EVENTS: List[Dict[str, Any]] = []
-_SUBSCRIBERS: List[Any] = []
+_EVENTS_LOCK = _threading.Lock()
 
 def push_event(ev: Dict[str, Any]) -> None:
     ev = {"ts": time.time(), **ev}
-    _EVENTS.append(ev)
-    for q in list(_SUBSCRIBERS):
-        try:
-            q.put_nowait(ev)
-        except Exception:
-            pass
+    with _EVENTS_LOCK:
+        _EVENTS.append(ev)
+        if len(_EVENTS) > 5000:
+            del _EVENTS[:2500]
 
 def log(tag: str, **kw: Any) -> None:
     push_event({"event": "server.log", "tag": tag, **kw})
@@ -80,19 +79,17 @@ class ClipOpIn(BaseModel):
 
 # --------------------------------------------------------------- SSE
 async def event_stream():
+    """Polling-based SSE — robust to FastAPI thread pools and simple to reason about."""
     import asyncio
-    queue: asyncio.Queue = asyncio.Queue()
-    _SUBSCRIBERS.append(queue)
-    try:
-        yield f"data: {json.dumps({'event':'hello','ts':time.time()})}\n\n"
-        while True:
-            try:
-                ev = await asyncio.wait_for(queue.get(), timeout=15.0)
-                yield f"data: {json.dumps(ev)}\n\n"
-            except asyncio.TimeoutError:
-                yield ": keepalive\n\n"
-    finally:
-        _SUBSCRIBERS.remove(queue)
+    idx = 0
+    yield f"data: {json.dumps({'event': 'hello', 'ts': time.time()})}\n\n"
+    while True:
+        await asyncio.sleep(0.4)
+        with _EVENTS_LOCK:
+            batch = _EVENTS[idx:]
+            idx = len(_EVENTS)
+        for ev in batch:
+            yield f"data: {json.dumps(ev)}\n\n"
 
 # --------------------------------------------------------------- routes
 @app.get("/health")

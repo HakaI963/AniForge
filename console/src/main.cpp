@@ -127,14 +127,27 @@ static std::string http_call(const char* method, const std::string& url,
     return ss.str();
 }
 
-// SSE worker (attached once at startup; keeps reconnecting with backoff)
+static size_t write_cb_plain(char* ptr, size_t size, size_t nmemb, void* userdata) {
+    CurlSink* sink = static_cast<CurlSink*>(userdata);
+    sink->buf.append(ptr, size * nmemb);
+    size_t pos;
+    while ((pos = sink->buf.find('\n')) != std::string::npos) {
+        std::string line = sink->buf.substr(0, pos);
+        sink->buf.erase(0, pos + 1);
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.rfind("data: ", 0) == 0) {
+            app_log(std::string("⟨") + line.substr(6) + "⟩");
+        }
+    }
+    return size * nmemb;
+}
+
+// SSE worker (attached once at startup; reconnects with backoff)
 static void sse_thread(std::string base) {
-    while (!g_app->running) std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    struct curl_slist* h = nullptr;
     while (g_app->running) {
         CURL* c = curl_easy_init();
         if (!c) return;
-        h = curl_slist_append(nullptr, "Accept: text/event-stream");
+        struct curl_slist* h = curl_slist_append(nullptr, "Accept: text/event-stream");
         curl_easy_setopt(c, CURLOPT_URL, (base + "/events").c_str());
         curl_easy_setopt(c, CURLOPT_HTTPHEADER, h);
         curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
@@ -144,9 +157,9 @@ static void sse_thread(std::string base) {
         curl_easy_setopt(c, CURLOPT_WRITEDATA, &sink);
         curl_easy_perform(c);
         curl_easy_cleanup(c);
+        curl_slist_free_all(h);
         app_log("[sse reconnect]");
         std::this_thread::sleep_for(std::chrono::seconds(2));
-        if (h) { curl_slist_free_all(h); h = nullptr; }
     }
 }
 
@@ -243,6 +256,10 @@ static void run_render() {
 
 static void poll_render() {
     if (g_app->renderJobState != 1 && g_app->renderJobState != 2) return;
+    static std::chrono::steady_clock::time_point last;
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count() < 1000) return;
+    last = now;
     std::string url = g_app->base + "/render/" + g_app->renderJobId;
     std::string resp;
     http_call("GET", url, "", &resp);
@@ -393,12 +410,11 @@ static void fx_window() {
 }
 
 static void chat_window() {
-    if (!ImGui::Begin("Prompt → afctl", nullptr)) { ImGui::End(); return; }
+    if (!ImGui::Begin("Prompt → OpenCode", nullptr)) { ImGui::End(); return; }
     bool submit = false;
-    ImGui::InputTextMultiline("##prompt", g_app->prompt, sizeof(g_app->prompt), ImVec2(-1, 80),
+    bool entered = ImGui::InputTextMultiline("##prompt", g_app->prompt, sizeof(g_app->prompt), ImVec2(-1, 80),
                               ImGuiInputTextFlags_EnterReturnsTrue);
-    if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter, false)) submit = true;
-    if (ImGui::Button("Send to OpenCode") || submit) {
+    if (ImGui::Button("Send to OpenCode") || entered) {
         std::string p(g_app->prompt);
         if (!p.empty()) {
             // escape quotes simply
