@@ -1,0 +1,73 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (created on main if missing)'
+        required: true
+        default: 'v0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+
+      - name: Build Android APK
+        run: gradle :app:assembleRelease :app:assembleDebug --no-daemon
+
+      - name: Build forge-console (ImGui, Linux x64)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libcurl4-openssl-dev
+          cmake -S console -B console/build -G Ninja
+          cmake --build console/build --parallel "$(nproc)"
+          strip console/build/forge-console
+          mkdir -p dist
+          cp console/build/forge-console dist/forge-console-linux-x64
+          chmod +x dist/forge-console-linux-x64
+
+      - name: Package
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk     out/aniforge-${{ steps.tag.outputs.tag }}.apk
+          cp app/build/outputs/apk/debug/app-debug.apk         out/aniforge-${{ steps.tag.outputs.tag }}-debug.apk
+          cp dist/forge-console-linux-x64                      out/
+          cp examples/demo.osp                                 out/
+          cp examples/ops.demo.json                            out/
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --target "${GITHUB_SHA}" \
+            --title "AniForge ${{ steps.tag.outputs.tag }}" \
+            --notes "Studio API + afctl + Forge Console (ImGui) + Android app. APK is debug-signed (installable). Console is Linux x64 (needs GLFW/GL/curl)." \
+            out/*

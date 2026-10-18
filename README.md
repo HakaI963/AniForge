@@ -2,7 +2,7 @@
 
 **Anime-grade video editing as a public API.** AniForge ports the OpenShot `/ openshot-qt`
 timeline core (`.osp` JSON, layers, clips with `position/start/end` cuts, OpenShot-style
-keyframes, effects, markers) into:
+keyframes, effects, markers) ** onto:
 
 | Piece | Where | What |
 |---|---|---|
@@ -12,7 +12,9 @@ keyframes, effects, markers) into:
 | **ImGui Forge Console** | `console/` | Dear ImGui C++ desktop viewer for the same project — timeline canvas, agent feed, FX panel, prompt box. |
 | **AniList material catalog** | `app/data/AniListApi` | Anime trending titles exposed to editors as anime material. |
 | **Examples** | `examples/demo.osp`, `examples/ops.demo.json` | Ready-to-run baseline timeline and an edit ops payload. |
-| **CI** | `.github/workflows/` | `server.yml` (pytest), `android.yml` (APK), `console.yml` (ImGui binary). |
+| **CI** | `.github/workflows/` | `server.yml` (pytest), `android.yml` (APK), `console.yml` (ImGui binary), `release.yml` (tag publish). |
+
+Statuses: [![](https://github.com/HakaI963/AniForge/actions/workflows/server.yml/badge.svg)](https://github.com/HakaI963/AniForge/actions) · [![](https://github.com/HakaI963/AniForge/actions/workflows/android.yml/badge.svg)](https://github.com/HakaI963/AniForge/actions) · [![](https://github.com/HakaI963/AniForge/actions/workflows/console.yml/badge.svg)](https://github.com/HakaI963/AniForge/actions) · [latest release](https://github.com/HakaI963/AniForge/releases/latest)
 
 ## Quick start
 
