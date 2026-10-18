@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""AniForge control CLI (afctl) — the agent/shell bridge to the Studio API.
+
+Stdlib only (no pip install needed). Talks to the Ktor/FastAPI Studio API.
+
+Usage examples:
+  afctl health
+  afctl schema
+  afctl validate --file project.osp
+  afctl apply --file project.osp --ops ops.json --message "3 cuts on the beat"
+  afctl render --file project.osp --preset shonen-flash --wait
+  afctl analyze --file project.osp
+  afctl watch                       # follow the live event stream (SSE)
+  afctl examples                    # copy-paste ops payloads for agents
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from typing import Any, Dict, List, Optional
+
+BASE = os.environ.get("ANIFORGE_STUDIO", "http://127.0.0.1:8787")
+U = urllib.request  #是有意为之的轻量写法,无第三方依赖
+
+def _req(method: str, path: str, payload: Optional[Dict[str, Any]] = None,
+          raw: bool = False) -> Any:
+    url = BASE.rstrip("/") + path
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    if data:
+        req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = resp.read().decode("utf-8")
+            if raw:
+                return body
+            return json.loads(body)
+    except urllib.error.HTTPError as e:
+        err = {"error": e.code, "body": e.read().decode("utf-8", "ignore")}
+        print(json.dumps(err, indent=2, ensure_ascii=False), file=sys.stderr)
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(json.dumps({"error": "connection", "detail": str(e.reason)}, ensure_ascii=False), file=sys.stderr)
+        sys.exit(2)
+
+def _json_arg(name: str, default: Optional[str] = None) -> Any:
+    raw = None
+    if name == "-":
+        raw = sys.stdin.read()
+    else:
+        path = name
+        if ":" in path and not os.path.isfile(path):
+            raw = path.split(":", 1)[1]
+        elif os.path.isfile(path):
+            with open(path, "r", encoding="utf-8") as f:
+                raw = f.read()
+        else:
+            print(f"error: file not found for {name}", file=sys.stderr); sys.exit(3)
+    if default is not None and raw in (None, ""):
+        return json.loads(default)
+    return json.loads(raw)
+
+
+def cmd_health(_a: argparse.Namespace) -> None:
+    print(json.dumps(_req("GET", "/health"), indent=2, ensure_ascii=False))
+
+def cmd_schema(_a: argparse.Namespace) -> None:
+    print(json.dumps(_req("GET", "/schema"), indent=2, ensure_ascii=False))
+
+def cmd_validate(a: argparse.Namespace) -> None:
+    project = _json_arg(a.file)
+    print(json.dumps(_req("POST", "/project/validate", {"project": project}),
+                     indent=2, ensure_ascii=False))
+
+def cmd_apply(a: argparse.Namespace) -> None:
+    ops = _json_arg(a.ops) if a.ops else json.loads(sys.stdin.read() or "[]")
+    project = _json_arg(a.file)
+    payload = {"project": project, "ops": ops, "message": getattr(a, "message", "")}
+    resp = _req("POST", "/edit/apply", payload)
+    out = a.out or a.file
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(resp["project"], f, indent=2, ensure_ascii=False)
+    print(json.dumps({"ok": resp["ok"], "out": out, "events": resp["events"],
+                      "issues": resp["issues"]}, indent=2, ensure_ascii=False))
+
+def cmd_render(a: argparse.Namespace) -> None:
+    project = _json_arg(a.file)
+    body = {"project": project, "preset": a.preset}
+    r = _req("POST", "/project/render", body)
+    print(json.dumps(r, indent=2, ensure_ascii=False))
+    if getattr(a, "wait", False) and r.get("job_id"):
+        status = _req("GET", f"/render/{r['job_id']}")
+        print(json.dumps(status, indent=2, ensure_ascii=False))
+
+def cmd_analyze(a: argparse.Namespace) -> None:
+    project = _json_arg(a.file)
+    print(json.dumps(_req("POST", "/analyze", {"project": project}), indent=2, ensure_ascii=False))
+
+def cmd_watch(a: argparse.Namespace) -> None:
+    url = BASE.rstrip("/") + "/events"
+    req = urllib.request.Request(url, headers={"Accept": "text/event-stream"})
+    with urllib.request.urlopen(req, timeout=0) as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "ignore").rstrip("\n")
+            if line.startswith("data: "):
+                print(json.dumps(json.loads(line[6:]), ensure_ascii=False), flush=True)
+            elif line.startswith(":"):
+                print(line, flush=True)
+
+def cmd_examples(_a: argparse.Namespace) -> None:
+    examples = {
+        "make_3_beat_cuts": {"ops": [
+            {"op": "cut", "clip_id": "c1", "at": 3.0},
+            {"op": "cut", "clip_id": "c1-b", "at": 6.5},
+            {"op": "cut", "clip_id": "c1-b", "at": 9.0},
+        ]},
+        "shonen_ramp": {"ops": [
+            {"op": "speed", "clip_id": "c1", "ramp": [[0.0, 0.6], [0.5, 2.0], [1.2, 0.9]]},
+            {"op": "flash_frame", "at": 5.0, "duration": 0.05},
+        ]},
+        "chroma_key_bg": {"ops": [
+            {"op": "add_effect", "clip_id": "c1",
+             "effect": {"type": "ChromaKey", "params": {"background": "#00FF00", "tolerance": 0.18}}},
+        ]},
+        "jp_text_card": {"ops": [
+            {"op": "set_text", "clip_id": "c2",
+             "text": {"content": "第0夜 序章", "style": "anime", "position": "center"}},
+        ]},
+        "sns_4x5_crop": {"ops": [{"op": "crop", "clip_id": "c1", "ratio": "4:5"}]},
+    }
+    print(json.dumps(examples, indent=2, ensure_ascii=False))
+
+def main() -> None:
+    p = argparse.ArgumentParser(prog="afctl", description="AniForge CLI (OpenCode friendly)")
+    sub = p.add_subparsers(dest="cmd")
+    sub.add_parser("health")
+    sub.add_parser("schema")
+    sub.add_parser("examples")
+
+    v = sub.add_parser("validate"); v.add_argument("--file", required=True)
+    a = sub.add_parser("apply"); a.add_argument("--file", required=True)
+    a.add_argument("--ops"); a.add_argument("--message", default=""); a.add_argument("--out")
+
+    r = sub.add_parser("render"); r.add_argument("--file", required=True)
+    r.add_argument("--preset"); r.add_argument("--wait", action="store_true")
+    n = sub.add_parser("analyze"); n.add_argument("--file", required=True)
+    sub.add_parser("watch")
+
+    args = p.parse_args()
+    if args.cmd == "health": cmd_health(args)
+    elif args.cmd == "schema": cmd_schema(args)
+    elif args.cmd == "examples": cmd_examples(args)
+    elif args.cmd == "validate": cmd_validate(args)
+    elif args.cmd == "apply": cmd_apply(args)
+    elif args.cmd == "render": cmd_render(args)
+    elif args.cmd == "analyze": cmd_analyze(args)
+    elif args.cmd == "watch": cmd_watch(args)
+    else:
+        p.print_help()
+
+if __name__ == "__main__":
+    main()

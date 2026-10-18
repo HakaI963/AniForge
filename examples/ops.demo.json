@@ -1,0 +1,11 @@
+[
+  {"op": "cut", "clip_id": "c1", "at": 8.4},
+  {"op": "speed", "clip_id": "c1", "ramp": [[0.0, 0.6], [0.5, 2.2], [1.2, 1.0]]},
+  {"op": "add_effect", "clip_id": "c1",
+   "effect": {"type": "ChromaKey", "params": {"background": "#00FF00", "tolerance": 0.18}}},
+  {"op": "set_text", "clip_id": "c1",
+   "text": {"content": "第0夜 序章", "style": "anime", "position": "center"}},
+  {"op": "crop", "clip_id": "c1", "ratio": "4:5"},
+  {"op": "flash_frame", "at": 8.4, "duration": 0.05},
+  {"op": "marker", "position": 8.4, "label": "かっこいい!"}
+]

@@ -1,0 +1,27 @@
+name: forge-console-linux
+on:
+  push: { branches: [ main ], paths: ["console/**", ".github/workflows/console.yml"] }
+  pull_request: { branches: [ main ], paths: ["console/**"] }
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libcurl4-openssl-dev
+      - name: CMake configure
+        run: cmake -S console -B console/build -G Ninja
+      - name: Build
+        run: cmake --build console/build --parallel $(nproc)
+      - name: Strip binary
+        run: strip console/build/forge-console
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-console
+          path: console/build/forge-console

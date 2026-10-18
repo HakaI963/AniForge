@@ -1,0 +1,17 @@
+build/
+!/**/build/
+.gradle/
+local.properties
+.idea/
+*.iml
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+out/
+captures/
+.externalNativeBuild/
+.cxx/

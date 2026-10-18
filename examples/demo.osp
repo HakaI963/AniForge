@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "fps": {"num": 24, "den": 1},
+  "width": 1920,
+  "height": 1080,
+  "profile": "shonen",
+  "layers": [
+    {"id": 0, "name": "V1"},
+    {"id": 1, "name": "V2"}
+  ],
+  "clips": [
+    {
+      "id": "c1",
+      "layer": 0,
+      "reader": {
+        "path": "https://media.aniforge.local/demo-op.mp4",
+        "has_video": true,
+        "has_audio": true,
+        "duration": 90.0,
+        "media_type": "video"
+      },
+      "position": 0.0,
+      "start": 0.5,
+      "end": 62.0,
+      "speed": 1.0,
+      "effects": [{"type": "Fade", "params": {"in": 0.4, "out": 0.4}}]
+    },
+    {
+      "id": "c2",
+      "layer": 1,
+      "reader": {
+        "path": "https://media.aniforge.local/demo-bgm.m4a",
+        "has_video": false,
+        "has_audio": true,
+        "duration": 240.0,
+        "media_type": "audio"
+      },
+      "position": 0.0,
+      "start": 0.0,
+      "end": 70.0,
+      "speed": 1.0
+    }
+  ],
+  "markers": [
+    {"position": 8.4, "label": "kiai!"},
+    {"position": 24.0, "label": "chorus"}
+  ]
+}
