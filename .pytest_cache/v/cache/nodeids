@@ -1,0 +1,21 @@
+[
+  "server/tests/test_api.py::test_analyze",
+  "server/tests/test_api.py::test_edit_apply_chroma_and_text",
+  "server/tests/test_api.py::test_edit_apply_cut_and_speed",
+  "server/tests/test_api.py::test_edit_apply_unknown_op_is_reported",
+  "server/tests/test_api.py::test_events_recent_has_data",
+  "server/tests/test_api.py::test_events_sse_streams_hello",
+  "server/tests/test_api.py::test_generic_clip_endpoints",
+  "server/tests/test_api.py::test_health",
+  "server/tests/test_api.py::test_render_job_stub",
+  "server/tests/test_api.py::test_schema",
+  "server/tests/test_api.py::test_validate_ok",
+  "server/tests/test_api.py::test_validate_overlap_flagged",
+  "server/tests/test_engine.py::test_cut_outside_clip_fails",
+  "server/tests/test_engine.py::test_cut_splits_at_timeline_time",
+  "server/tests/test_engine.py::test_episode_speed_changes_duration",
+  "server/tests/test_engine.py::test_osp_roundtrip",
+  "server/tests/test_engine.py::test_overlap_detection",
+  "server/tests/test_engine.py::test_presets_defined",
+  "server/tests/test_engine.py::test_speed_keyframe_ramp"
+]

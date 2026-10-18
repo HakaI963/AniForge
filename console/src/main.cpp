@@ -148,7 +148,7 @@ static void sse_thread(std::string base) {
         CURL* c = curl_easy_init();
         if (!c) return;
         struct curl_slist* h = curl_slist_append(nullptr, "Accept: text/event-stream");
-        curl_easy_setopt(c, CURLOPT_URL, (base + "/events").c_str());
+        curl_easy_setopt(c, CURLOPT_URL, (base + std::string("/events")).c_str());
         curl_easy_setopt(c, CURLOPT_HTTPHEADER, h);
         curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, 4L);
@@ -161,21 +161,6 @@ static void sse_thread(std::string base) {
         app_log("[sse reconnect]");
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
-}
-
-static size_t write_cb_plain(char* ptr, size_t size, size_t nmemb, void* userdata) {
-    CurlSink* sink = static_cast<CurlSink*>(userdata);
-    sink->buf.append(ptr, size * nmemb);
-    size_t pos;
-    while ((pos = sink->buf.find('\n')) != std::string::npos) {
-        std::string line = sink->buf.substr(0, pos);
-        sink->buf.erase(0, pos + 1);
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line.rfind("data: ", 0) == 0) {
-            app_log(std::string("⟨") + line.substr(6) + "⟩");
-        }
-    }
-    return size * nmemb;
 }
 
 static void apply_ops_json(const json& ops) {
@@ -192,7 +177,7 @@ static void apply_ops_json(const json& ops) {
     out["ops"] = ops;
     out["message"] = "forge-console fx";
     std::string resp;
-    std::string st = http_call("POST", g_app->base + "/edit/apply", out.dump(), &resp);
+    std::string st = http_call("POST", std::string(g_app->base) + "/edit/apply", out.dump(), &resp);
     app_log("[apply] " + st + " " + resp.substr(0, 220));
     try {
         json r = json::parse(resp);
@@ -245,7 +230,7 @@ static void run_render() {
     static const char* kPresets[3] = {nullptr, "shonen-flash", "anime-studio-standard"};
     if (g_app->renderPreset > 0) out["preset"] = kPresets[g_app->renderPreset];
     std::string resp;
-    std::string st = http_call("POST", g_app->base + "/project/render", out.dump(), &resp);
+    std::string st = http_call("POST", std::string(g_app->base) + "/project/render", out.dump(), &resp);
     app_log("[render] " + st + " " + resp.substr(0, 220));
     try {
         json r = json::parse(resp);
@@ -260,7 +245,7 @@ static void poll_render() {
     auto now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count() < 1000) return;
     last = now;
-    std::string url = g_app->base + "/render/" + g_app->renderJobId;
+    std::string url = std::string(g_app->base) + "/render/" + g_app->renderJobId;
     std::string resp;
     http_call("GET", url, "", &resp);
     try {
@@ -411,7 +396,6 @@ static void fx_window() {
 
 static void chat_window() {
     if (!ImGui::Begin("Prompt → OpenCode", nullptr)) { ImGui::End(); return; }
-    bool submit = false;
     bool entered = ImGui::InputTextMultiline("##prompt", g_app->prompt, sizeof(g_app->prompt), ImVec2(-1, 80),
                               ImGuiInputTextFlags_EnterReturnsTrue);
     if (ImGui::Button("Send to OpenCode") || entered) {

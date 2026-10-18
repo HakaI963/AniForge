@@ -140,7 +140,7 @@ def _apply_ops(p: AsProject, ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 ramp = [(float(t), float(s)) for t, s in step["ramp"]] if step.get("ramp") else None
                 _, ev = Ops.speed(p, step["clip_id"], float(step.get("speed", 1.0)), ramp); events += ev
             elif op == "add_effect":
-                _, ev = Ops.add_effect(p, step["clip_id"], Effect.parse(step["effect'])); events += ev
+                _, ev = Ops.add_effect(p, step["clip_id"], Effect.parse(step["effect"])); events += ev
             elif op == "move":
                 _, ev = Ops.move(p, step["clip_id"], float(step["position"]), step.get("layer")); events += ev
             elif op == "set_text":
