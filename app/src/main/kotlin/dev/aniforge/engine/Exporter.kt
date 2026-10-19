@@ -131,6 +131,18 @@ class Exporter(private val context: Context) {
     }
 
     // ------------------------------------------------------------------ helpers
+    /** Decodes a card bitmap, downscaled to at most [maxW]. */
+    private fun decodeImage(path: String, maxW: Int): android.graphics.Bitmap? {
+        val f = java.io.File(path)
+        if (!f.exists()) return null
+        val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeFile(path, opts)
+        var sample = 1
+        while (opts.outWidth / sample > maxW) sample *= 2
+        val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+        return android.graphics.BitmapFactory.decodeFile(path, o)
+    }
+
     private fun framesFor(clip: Clip, spec: Spec): Int =
         ceil((clip.outMs - clip.inMs).toDouble() * clip.speed / 1000.0 * spec.fps).toInt().coerceAtLeast(1)
 
@@ -157,7 +169,7 @@ class Exporter(private val context: Context) {
 
     // ------------------------------------------------------------------ video
     private fun videoPass(project: Project, spec: Spec, writer: MuxerWriter, onProgress: (Float) -> Unit, err: java.util.concurrent.atomic.AtomicReference<Throwable?>) {
-        val segments = project.allVideoClips().sortedBy { it.positionMs }
+        val segments = project.visualClips()
         val totalFrames = max(1L, segments.sumOf { framesFor(it, spec).toLong() })
         val framesDone = java.util.concurrent.atomic.AtomicLong(0)
 
@@ -190,12 +202,23 @@ class Exporter(private val context: Context) {
                 val n = framesFor(clip, spec)
                 var stream: VideoWindow? = null
                 try {
-                    stream = VideoWindow(context, clip, videoTex)
+                    val isImage = clip.kind == "image"
+                    var bmpTex = -1
+                    if (isImage) {
+                        val bmp = decodeImage(clip.sourceUri.removePrefix("file://"), spec.width)
+                            ?: throw RuntimeException("card image unreadable: " + clip.sourceUri)
+                        val ids = intArrayOf(0); GLES20.glGenTextures(1, ids, 0); bmpTex = ids[0]
+                        drawer.uploadBitmap(bmpTex, bmp)
+                    } else {
+                        stream = VideoWindow(context, clip, videoTex)
+                    }
                     for (i in 0 until n) {
                         if (canceled.get()) break@outer
                         val outMs = clip.positionMs + (i.toLong() * 1000L) / spec.fps
-                        val srcMs = clip.sourceTimeMs(outMs).coerceIn(clip.inMs, clip.outMs)
-                        stream.pull(srcMs, stMatrix)
+                        if (!isImage) {
+                            val srcMs = clip.sourceTimeMs(outMs).coerceIn(clip.inMs, clip.outMs)
+                            stream!!.pull(srcMs, stMatrix)
+                        }
                         val srcAspect = if (clip.srcH > 0 && clip.srcW > 0) clip.srcW.toFloat() / clip.srcH.toFloat() else 16f / 9f
                         val local = max(0L, outMs - clip.positionMs)
                         val scale = transform(clip, Prop.SCALE, local, 1f)
@@ -218,7 +241,11 @@ class Exporter(private val context: Context) {
 
                         GLES20.glClearColor(0f, 0f, 0f, 1f)
                         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-                        drawer.drawVideo(videoTex, stMatrix, mvp, g.bright + extraBright, g.contrast, g.sat, g.tint, alpha, win)
+                        if (isImage) {
+                            drawer.drawBitmapTexture(bmpTex, mvp, g.bright + extraBright, g.contrast, g.sat, g.tint, alpha, win)
+                        } else {
+                            drawer.drawVideo(videoTex, stMatrix, mvp, g.bright + extraBright, g.contrast, g.sat, g.tint, alpha, win)
+                        }
                         if (clip.title.isNotEmpty()) {
                             TitlePainter.bitmap(clip, spec.width, spec.height)?.let { bmp ->
                                 val tex = drawer.overlayTexture("title" + clip.id, bmp)

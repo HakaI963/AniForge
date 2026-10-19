@@ -11,13 +11,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dev.aniforge.domain.ProjectStore
+import dev.aniforge.ui.AgentScreen
 import dev.aniforge.ui.EditorScreen
-import dev.aniforge.ui.HomeScreen
 import dev.aniforge.ui.theme.AniForgeTheme
 
 /**
- * AniForge Studio — full on-device video editor (landscape, immersive).
- * Home = import & saved projects · Editor = timeline, motion graphs, auto-edit, export.
+ * AniForge Studio — AI auto-editor (landscape, immersive).
+ * AgentScreen = import + prompt + ⚡AUTO EDIT (agents cut/fetch/build) ·
+ * EditorScreen = result playback + ⚙ for pro tools when wanted.
  */
 class MainActivity : ComponentActivity() {
 
@@ -35,11 +36,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             AniForgeTheme(dark = true) {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    var screen by remember { mutableStateOf("home") }
-                    if (screen == "home") {
-                        HomeScreen(store) { screen = "editor" }
-                    } else {
-                        EditorScreen(store) { screen = "home" }
+                    var screen by remember { mutableStateOf("agent") }
+                    when (screen) {
+                        "agent" -> AgentScreen(store) { screen = "result" }
+                        "result" -> EditorScreen(store, onExit = { screen = "agent" }, simple = true)
+                        else -> EditorScreen(store, onExit = { screen = "agent" }, simple = false)
                     }
                 }
             }

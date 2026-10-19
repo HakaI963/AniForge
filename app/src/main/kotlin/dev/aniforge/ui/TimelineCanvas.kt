@@ -147,7 +147,11 @@ private fun TrackRow(store: ProjectStore, track: Int, tint: Color, ppsDp: Float)
                     }
             ) {
                 Text(
-                    if (clip.kind == "audio") "♪" else clip.title.ifEmpty { "clip" },
+                    when {
+                        clip.kind == "audio" -> "♪"
+                        clip.kind == "image" -> "◧ card"
+                        else -> clip.title.ifEmpty { "clip" }
+                    },
                     fontSize = 9.sp, color = Color.White, maxLines = 1,
                     modifier = Modifier.padding(start = 5.dp, top = 2.dp)
                 )

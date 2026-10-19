@@ -55,13 +55,35 @@ object Shaders {
             gl_FragColor = vec4(c.rgb, c.a * uAlpha);
         }
     """
+
+    /** Same look as FS_VIDEO but for a plain 2D bitmap (title cards, fetched material). */
+    const val FS_BITMAP = """
+        precision mediump float;
+        varying vec2 vTex;
+        uniform sampler2D uTex;
+        uniform float uBright;
+        uniform float uContrast;
+        uniform float uSat;
+        uniform vec3 uTint;
+        uniform float uAlpha;
+        uniform vec4 uClampUV;
+        void main(){
+            vec2 uv = clamp(vTex, uClampUV.xy, uClampUV.zw);
+            vec3 c = texture2D(uTex, uv).rgb;
+            c = (c - 0.5) * uContrast + 0.5 + uBright;
+            float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+            c = mix(vec3(l), c, uSat);
+            c *= uTint;
+            gl_FragColor = vec4(clamp(c, 0.0, 1.0), uAlpha);
+        }
+    """
 }
 
 private fun Float.toStringNice(): String = "%.6f".format(this)
 
 class GLDrawer {
 
-    data class Programs(val video: Int, val overlay: Int)
+    data class Programs(val video: Int, val overlay: Int, val bitmap: Int)
     val programs: Programs
 
     private val quad: FloatBuffer = ByteBuffer.allocateDirect(4 * 4 * 4).run {
@@ -83,11 +105,14 @@ class GLDrawer {
         val vs = compile(GLES20.GL_VERTEX_SHADER, Shaders.VS)
         val fsVideo = compile(GLES20.GL_FRAGMENT_SHADER, Shaders.FS_VIDEO)
         val fsOv = compile(GLES20.GL_FRAGMENT_SHADER, Shaders.FS_OVERLAY)
+        val fsBmp = compile(GLES20.GL_FRAGMENT_SHADER, Shaders.FS_BITMAP)
         val pv = GLES20.glCreateProgram()
         GLES20.glAttachShader(pv, vs); GLES20.glAttachShader(pv, fsVideo); GLES20.glLinkProgram(pv)
         val po = GLES20.glCreateProgram()
         GLES20.glAttachShader(po, vs); GLES20.glAttachShader(po, fsOv); GLES20.glLinkProgram(po)
-        programs = Programs(pv, po)
+        val pb = GLES20.glCreateProgram()
+        GLES20.glAttachShader(pb, vs); GLES20.glAttachShader(pb, fsBmp); GLES20.glLinkProgram(pb)
+        programs = Programs(pv, po, pb)
         quad.position(0); idx.position(0)
     }
 
@@ -140,8 +165,18 @@ class GLDrawer {
     private val overlayCache = HashMap<String, Int>()
     private val mvpLocal = FloatArray(16)
 
-    fun overlayTexture(key: String, bmp: Bitmap): Int {
-        val cached = overlayCache[key]
+    /** Uploads the given bitmap into an already-generated GL_TEXTURE_2D id. */
+    fun uploadBitmap(texId: Int, bmp: Bitmap) {
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bmp, 0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+    }
+
+    fun overlayTexture(key: String, bmp: Bitmap): Int {        val cached = overlayCache[key]
         if (cached != null) return cached
         val id = newTextureId()
         overlayCache[key] = id
@@ -164,6 +199,45 @@ class GLDrawer {
     }
 
     fun deleteTex(id: Int) { GLES20.glDeleteTextures(1, intArrayOf(id), 0) }
+
+    private val ident = FloatArray(16).also { Matrix.setIdentityM(it, 0) }
+
+    /** Draws an android Bitmap (GL_TEXTURE_2D) with the same grade/transform math as video. */
+    fun drawBitmapTexture(
+        texId: Int,
+        mvp: FloatArray,
+        bright: Float, contrast: Float, sat: Float,
+        tint: FloatArray,
+        alpha: Float,
+        uvc: FloatArray,
+    ) {
+        GLES20.glUseProgram(programs.bitmap)
+        val locPos = GLES20.glGetAttribLocation(programs.bitmap, "aPos")
+        val locUv = GLES20.glGetAttribLocation(programs.bitmap, "aUV")
+        GLES20.glEnableVertexAttribArray(locPos)
+        GLES20.glEnableVertexAttribArray(locUv)
+        quad.position(0)
+        GLES20.glVertexAttribPointer(locPos, 2, GLES20.GL_FLOAT, false, 16, quad)
+        quad.position(2)
+        GLES20.glVertexAttribPointer(locUv, 2, GLES20.GL_FLOAT, false, 16, quad)
+
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(programs.bitmap, "uMVP"), 1, false, mvp, 0)
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(programs.bitmap, "uSTMat"), 1, false, ident, 0)
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(programs.bitmap, "uBright"), bright)
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(programs.bitmap, "uContrast"), contrast)
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(programs.bitmap, "uSat"), sat)
+        GLES20.glUniform3f(GLES20.glGetUniformLocation(programs.bitmap, "uTint"), tint[0], tint[1], tint[2])
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(programs.bitmap, "uAlpha"), alpha)
+        GLES20.glUniform4f(GLES20.glGetUniformLocation(programs.bitmap, "uClampUV"), uvc[0], uvc[1], uvc[2], uvc[3])
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
+        GLES20.glUniform1i(GLES20.glGetUniformLocation(programs.bitmap, "uTex"), 0)
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_BYTE, idx)
+        GLES20.glDisableVertexAttribArray(locPos)
+        GLES20.glDisableVertexAttribArray(locUv)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+    }
 
     private fun newTextureId(): Int =
         intArrayOf(0).also { GLES20.glGenTextures(1, it, 0) }[0]

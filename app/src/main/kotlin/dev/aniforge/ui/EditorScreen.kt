@@ -152,9 +152,9 @@ object Importer {
     }
 }
 
-/** Full-screen landscape editor. */
+/** Full-screen landscape editor. `simple` = agent-driven result view (no inspector). */
 @Composable
-fun EditorScreen(store: ProjectStore, onExit: () -> Unit) {
+fun EditorScreen(store: ProjectStore, onExit: () -> Unit, simple: Boolean = false) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val driver = remember { PlaybackDriver(context, store) }
@@ -165,6 +165,7 @@ fun EditorScreen(store: ProjectStore, onExit: () -> Unit) {
     var showExport by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     var tickUi by remember { mutableIntStateOf(0) }
+    var pro by remember { mutableStateOf(!simple) }
 
     // playhead ticker
     LaunchedEffect(store.playing.value) {
@@ -248,6 +249,7 @@ fun EditorScreen(store: ProjectStore, onExit: () -> Unit) {
             IconBtn("save") { store.save(context); store.say("project saved"); tickUi++ }
             IconBtn("⬇ export", showExport) { showExport = !showExport }
             IconBtn("?", showHelp) { showHelp = !showHelp }
+            IconBtn("⚙", pro) { pro = !pro; if (!pro) { showAuto = false; showHelp = false } }
             Spacer(Modifier.width(8.dp))
         }
 
@@ -310,16 +312,18 @@ fun EditorScreen(store: ProjectStore, onExit: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
             }
 
-            // ── right: inspector ─────────────────────────────────────────
-            Column(
-                Modifier
-                    .weight(0.38f)
-                    .fillMaxHeight()
-                    .background(Color(0xFF0E1219))
-            ) {
-                Inspector(store, store.playheadMs.value) { tickUi++ }
-                if (showAuto) AutoPanel(store, scope, context) { refPicker.launch(arrayOf("video/*")) }
-                if (showHelp) HelpPanel()
+            // ── right rail: results-only in simple mode, inspector in pro mode
+            if (pro) {
+                Column(
+                    Modifier
+                        .weight(0.38f)
+                        .fillMaxHeight()
+                        .background(Color(0xFF0E1219))
+                ) {
+                    Inspector(store, store.playheadMs.value) { tickUi++ }
+                    if (showAuto) AutoPanel(store, scope, context) { refPicker.launch(arrayOf("video/*")) }
+                    if (showHelp) HelpPanel()
+                }
             }
         }
     }

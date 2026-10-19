@@ -125,7 +125,8 @@ class PreviewView(context: Context) : GLSurfaceView(context) {
         private fun drawTimeline(d: GLDrawer) {
             val p = PreviewState.project ?: return
             val t = PreviewState.playheadMs
-            val clip = p.clips.firstOrNull { it.kind == "video" && it.contains(t) } ?: return
+            val clip = p.clips.firstOrNull { it.kind != "audio" && it.contains(t) } ?: return
+            val isImage = clip.kind == "image"
             val srcAspect = if (clip.srcH > 0 && clip.srcW > 0) clip.srcW.toFloat() / clip.srcH.toFloat() else 16f / 9f
             val localMs = max(0L, t - clip.positionMs)
             val local = localMs / 1000f
@@ -152,7 +153,18 @@ class PreviewView(context: Context) : GLSurfaceView(context) {
                 mvp = RenderMat.videoMvp(width, height, srcAspect, scale, rot, px, py)
                 win = floatArrayOf(0f, 0f, 1f, 1f)
             }
-            if (clip.color == dev.aniforge.domain.ColorGrade.NOIR) {
+            if (isImage) {
+                // title card / fetched material: 2D bitmap texture
+                val path = clip.sourceUri.removePrefix("file://")
+                ImageRenders.begin(path)
+                val bmp = ImageRenders.peek(path) ?: return
+                val texId = d.overlayTexture("card" + clip.id, bmp)
+                val m2 = if (clip.crop.aspect != null) RenderMat.ortho()
+                    else RenderMat.videoMvp(width, height, srcAspect, scale, rot, px, py)
+                val w2 = if (clip.crop.aspect != null) Crop.window(clip.crop.aspect, srcAspect, px, py, scale)
+                    else floatArrayOf(0f, 0f, 1f, 1f)
+                d.drawBitmapTexture(texId, m2, bright, clip.contrast, clip.saturation, tint, alpha, w2)
+            } else if (clip.color == dev.aniforge.domain.ColorGrade.NOIR) {
                 d.drawVideo(videoTextureId, stMatrix, mvp, bright, clip.contrast, 0f, tint, alpha, win)
             } else {
                 d.drawVideo(videoTextureId, stMatrix, mvp, bright, clip.contrast, clip.saturation, tint, alpha, win)

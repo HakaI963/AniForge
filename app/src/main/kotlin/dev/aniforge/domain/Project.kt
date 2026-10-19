@@ -126,6 +126,7 @@ data class Project(
     fun videoTrackClips(track: Int = 0): List<Clip> =
         clips.filter { it.track != 2 && it.kind == "video" }.sortedBy { it.positionMs }
     fun allVideoClips(): List<Clip> = clips.filter { it.kind == "video" }
+    fun visualClips(): List<Clip> = clips.filter { it.kind != "audio" }.sortedBy { it.positionMs }
     fun musicClips(): List<Clip> = clips.filter { it.track == 2 && it.kind == "audio" }
     fun find(id: String): Clip? = clips.firstOrNull { it.id == id }
     fun activeAt(t: Long): List<Clip> = clips.filter { it.contains(t) }
