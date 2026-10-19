@@ -318,7 +318,7 @@ fun EditorScreen(store: ProjectStore, onExit: () -> Unit) {
                     .background(Color(0xFF0E1219))
             ) {
                 Inspector(store, store.playheadMs.value) { tickUi++ }
-                if (showAuto) AutoPanel(store, scope, context, refPicker)
+                if (showAuto) AutoPanel(store, scope, context) { refPicker.launch(arrayOf("video/*")) }
                 if (showHelp) HelpPanel()
             }
         }
@@ -334,7 +334,7 @@ private fun AutoPanel(
     store: ProjectStore,
     scope: kotlinx.coroutines.CoroutineScope,
     context: Context,
-    refPicker: androidx.activity.compose.ManagedActivityResultLauncher<Array<String>, List<Uri>>,
+    pickReference: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().background(Color(0xFF141A24))) {
         SectionLabel("auto edit")
@@ -342,7 +342,7 @@ private fun AutoPanel(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            IconBtn("⧉ match edit") { refPicker.launch(arrayOf("video/*")) }
+            IconBtn("⧉ match edit") { pickReference() }
             IconBtn("⚡ beat cut") {
                 val id = store.selection.value ?: store.project.value.videoTrackClips().firstOrNull()?.id
                 if (id != null) scope.launch {

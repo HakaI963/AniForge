@@ -207,6 +207,7 @@ class GLDrawer {
     }
 
 
+}
 /** MVP computation for 2D output quads. */
 object RenderMat {
     private val tmp = FloatArray(16)
@@ -260,5 +261,4 @@ object Crop {
         val cy = 0.5f + posY * marginY
         return floatArrayOf(cx - w / 2f, cy - h / 2f, cx + w / 2f, cy + h / 2f)
     }
-}
 }

@@ -46,7 +46,7 @@ fun Inspector(store: ProjectStore, playheadMs: Long, refresh: () -> Unit) {
         }
 
         when (tab.value) {
-            "cut" -> cutTab(store, clip, playheadMs)
+            "cut" -> cutTab(store, clip, playheadMs, refresh)
             "motion" -> {
                 item {
                     var prop by remember { mutableStateOf(Prop.SCALE) }
@@ -76,6 +76,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.cutTab(
     store: ProjectStore,
     clip: Clip,
     playheadMs: Long,
+    refresh: () -> Unit,
 ) {
     item {
         SectionLabel("cut · ${timecode(clip.inMs)} → ${timecode(clip.outMs)}")

@@ -11,6 +11,7 @@ import android.opengl.EGLConfig
 import android.opengl.EGLContext
 import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
+import android.graphics.SurfaceTexture
 import android.opengl.GLES20
 import android.view.Surface
 import android.opengl.Matrix
@@ -18,7 +19,6 @@ import dev.aniforge.domain.Clip
 import dev.aniforge.domain.ColorGrade
 import dev.aniforge.domain.Project
 import dev.aniforge.domain.Prop
-import dev.aniforge.engine.Crop
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -56,7 +56,7 @@ class Exporter(private val context: Context) {
         val writer = MuxerWriter(mux)
         val err = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
 
-        val v = Thread { try { videoPass(project, spec, writer, onProgress) } catch (t: Throwable) { err.compareAndSet(null, t) } }
+        val v = Thread { try { videoPass(project, spec, writer, onProgress, err) } catch (t: Throwable) { err.compareAndSet(null, t) } }
         val a = Thread { try { audioPass(project, spec, writer) } catch (t: Throwable) { err.compareAndSet(null, t) } }
         v.start(); a.start()
         v.join(); a.join()
@@ -156,7 +156,7 @@ class Exporter(private val context: Context) {
     }
 
     // ------------------------------------------------------------------ video
-    private fun videoPass(project: Project, spec: Spec, writer: MuxerWriter, onProgress: (Float) -> Unit) {
+    private fun videoPass(project: Project, spec: Spec, writer: MuxerWriter, onProgress: (Float) -> Unit, err: java.util.concurrent.atomic.AtomicReference<Throwable?>) {
         val segments = project.allVideoClips().sortedBy { it.positionMs }
         val totalFrames = max(1L, segments.sumOf { framesFor(it, spec).toLong() })
         val framesDone = java.util.concurrent.atomic.AtomicLong(0)
@@ -225,7 +225,7 @@ class Exporter(private val context: Context) {
                                 drawer.drawOverlay(tex, spec.width, spec.height, bmp.width, bmp.height, 0f, -0.55f, 1f)
                             }
                         }
-                        if (!EGL14.eglSwapBuffers(egl.display, egl.eglSurface)) throw RuntimeException("swap failed")
+                        if (!EGL14.eglSwapBuffers(egl.display, egl.surface)) throw RuntimeException("swap failed")
 
                         val d = framesDone.incrementAndGet()
                         if (d % 9L == 0L) onProgress((d.toFloat() / totalFrames))
@@ -579,7 +579,10 @@ class Exporter(private val context: Context) {
                 val f = ex.getTrackFormat(i)
                 if (f.getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true) { ti = i; fmt = f; break }
             }
-            if (ti < 0) { runCatching { ex.release() }; eos = true; return }
+            if (ti < 0) {
+                runCatching { ex.release() }
+                eos = true
+            } else {
             val f = fmt!!
             rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             ex.selectTrack(ti)
@@ -588,6 +591,7 @@ class Exporter(private val context: Context) {
             d.configure(f, null, null, 0)
             d.start()
             dec = d
+            }
         }
 
         /** (left, right) at source time ms. Monotonic; returns (0,0) at/after EOS. */

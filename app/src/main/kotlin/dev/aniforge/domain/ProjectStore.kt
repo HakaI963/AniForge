@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import java.io.File
+import kotlin.math.max
 
 /** Editor state + history (undo/redo) + disk persistence. */
 class ProjectStore {

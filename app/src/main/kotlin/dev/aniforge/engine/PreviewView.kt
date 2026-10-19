@@ -113,7 +113,7 @@ class PreviewView(context: Context) : GLSurfaceView(context) {
             GLES20.glClearColor(0.043f, 0.043f, 0.055f, 1f)
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
             val t = st ?: return
-            if (frameDirty) { frameDirty = false; runCatching { st.updateTexImage() }.onFailure { return } }
+            if (frameDirty) { frameDirty = false; runCatching { t.updateTexImage() }.onFailure { return } }
             t.getTransformMatrix(stMatrix)
             try {
                 drawTimeline(d)
