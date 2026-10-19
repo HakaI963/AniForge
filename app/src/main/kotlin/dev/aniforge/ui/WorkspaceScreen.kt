@@ -274,13 +274,13 @@ fun WorkspaceScreen(store: ProjectStore, onOpenPro: () -> Unit) {
                 IconBtn("↪") { store.redo(); tickUi++ }
                 Spacer(Modifier.weight(1f))
                 androidx.compose.material3.Slider(
-                    value = zoom.value, onValueChange = { zoom.value = it },
+                    value = zoom, onValueChange = { zoom = it },
                     valueRange = 0.4f..6f,
                     modifier = Modifier.width(90.dp).height(22.dp)
                 )
                 Spacer(Modifier.width(6.dp))
             }
-            TimelineCanvas(store, zoom.value, scroll) { driver.scrubTo(it) }
+            TimelineCanvas(store, zoom, scroll) { driver.scrubTo(it) }
             Spacer(Modifier.height(3.dp))
         }
     }

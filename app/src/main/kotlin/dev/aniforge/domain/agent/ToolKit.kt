@@ -697,7 +697,7 @@ class ToolKit(
                 val nxt = inRange.getOrNull(idxIn + 1)
                 if (nxt == null || nxt - b >= gapMs) {
                     val segOut = nxt?.minus(gapMs / 2)?.coerceAtLeast(b + 100) ?: c.outMs
-                    loud.add(start to min(segOut, c.out))
+                    loud.add(start to min(segOut, c.outMs))
                     if (nxt == null) break
                     start = nxt - gapMs / 4
                 }
