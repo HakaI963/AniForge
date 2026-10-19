@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- film frame -->
+    <path
+        android:pathData="M30,38 h48 a7,7 0 0 1 7,7 v28 a7,7 0 0 1 -7,7 h-48 a7,7 0 0 1 -7,-7 v-28 a7,7 0 0 1 7,-7 z"
+        android:strokeColor="#FFF4F7FF"
+        android:strokeWidth="4.5"
+        android:fillColor="#00000000"/>
+    <!-- play triangle -->
+    <path
+        android:pathData="M46,46 L46,72 L68,59 Z"
+        android:fillColor="#FFFF4D6D"/>
+    <!-- cyan slash (the "forge" cut) -->
+    <path
+        android:pathData="M34,76 L74,42"
+        android:strokeColor="#FF7EE3C5"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"/>
+    <!-- sparkle -->
+    <path
+        android:pathData="M81,22 L83.4,27.6 L89,30 L83.4,32.4 L81,38 L78.6,32.4 L73,30 L78.6,27.6 Z"
+        android:fillColor="#FFFFC24D"/>
+</vector>
