@@ -222,7 +222,7 @@ fun AgentScreen(store: ProjectStore, onOpenResult: () -> Unit) {
 
 /** Optional LLM configuration (any OpenAI-compatible endpoint). */
 @Composable
-private fun BrainConfig() {
+fun BrainConfig() {
     val context = LocalContext.current
     val cfg = remember { Llm.load(context) }
     var endpoint by remember { mutableStateOf(cfg?.endpoint ?: "") }

@@ -71,7 +71,24 @@ fun TimelineCanvas(
                             onSeek(t.coerceIn(0, totalMs))
                         }
                     }
-            ) { RulerCanvas(totalMs) }
+            ) {
+                RulerCanvas(totalMs)
+                // marker flags (agent-manageable)
+                Canvas(Modifier.fillMaxSize()) {
+                    val pps = size.width / (totalMs / 1000f).coerceAtLeast(1f)
+                    val paint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.rgb(0xFF, 0xD5, 0x4F)
+                        textSize = 26f
+                        isAntiAlias = true
+                    }
+                    val nc = drawContext.canvas.nativeCanvas
+                    for (m in store.project.value.sortedMarkers()) {
+                        val x = m.tMs / 1000f * pps
+                        nc.drawLine(x, 0f, x, size.height - 2f, paint)
+                        if (m.note.isNotBlank()) nc.drawText("⚑", x + 2f, 26f, paint)
+                    }
+                }
+            }
 
             TrackRow(store, 0, VideoA, ppsDp)
             TrackRow(store, 1, VideoB, ppsDp)

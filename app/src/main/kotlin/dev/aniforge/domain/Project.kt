@@ -114,6 +114,9 @@ data class Clip(
 }
 
 @Serializable
+data class Marker(val tMs: Long, val note: String = "")
+
+@Serializable
 data class Project(
     val id: String,
     val title: String,
@@ -121,7 +124,9 @@ data class Project(
     val width: Int = 1920,
     val height: Int = 1080,
     val clips: List<Clip> = emptyList(),
+    val markers: List<Marker> = emptyList(),
 ) {
+    fun sortedMarkers(): List<Marker> = markers.sortedBy { it.tMs }
     fun durationMs(): Long = clips.maxOfOrNull { it.outMsEnd() } ?: 0L
     fun videoTrackClips(track: Int = 0): List<Clip> =
         clips.filter { it.track != 2 && it.kind == "video" }.sortedBy { it.positionMs }

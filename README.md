@@ -7,7 +7,7 @@ keyframes, effects, markers) ** onto:
 | Piece | Where | What |
 |---|---|---|
 | **Studio engine + REST API** | `server/` | Python FastAPI. Pure ops: project-in → project-out + events; `ops` for cuts, speed ramps, chroma key, JP text cards, crop presets, "flash frame", markers. SSE `/events` for the live monitor feed. |
-| **Android app** (APK) | `app/` | **AniForge Studio** — AI auto editor (Compose): agents plan cuts, fetch music/material, auto-build & export real MP4s. |
+| **Android app** (APK) | `app/` | **AniForge ChatCut** — agent-native editor (Compose): chat agent + multitrack timeline + real MP4 export (OpenChatCut port). |
 | **Agent CLI** | `cli/afctl` | `afctl` — stdlib only, agent-first CLI that maps any "edit like this" intent onto ops. |
 | **ImGui Forge Console** | `console/` | Dear ImGui C++ desktop viewer for the same project — timeline canvas, agent feed, FX panel, prompt box. |
 | **AniList material catalog** | `server/` (Studio API) | Anime trending titles exposed to editors as anime material. |
@@ -46,25 +46,37 @@ see [`skills/aniforge-edit/SKILL.md`] — OpenCode plans cuts/effects/texts, sub
 `/health`, `/schema`, `/project/validate`, `/edit/apply`, `/clip/{add,move,cut,speed,text,crop,render}`,
 `/project/render`, `/render/{id}`, `/analyze`, `/events` (SSE), `/events/recent`.
 
-## Android app — AniForge Studio (AI auto editor)
+## Android app — AniForge ChatCut (agent-native editor, port of OpenChatCut)
 
-`app/` is an **agent-driven auto editor**: you import your own clips, type what you want
-("30s hype amv, vertical, with music"), press **⚡ AUTO EDIT** — and the app does the rest:
+`app/` (v0.4) is an **agent-native editor** — the OpenChatCut architecture ported to
+Android: one chat agent drives **one real, fully editable timeline** through a named
+tool catalog, and every tool call is visible in the conversation.
 
-- **Agent 1 — the director.** Analyzes every clip (scene cuts, cadence, energy), reads your
-  prompt, and builds the entire timeline itself: intro card → cuts on the rhythm → speed waves,
-  push-ins, crossfades, grade rotation, SNS crop plan → outro card → music bed with a
-  volume envelope. Optional: point the 🧠 tab at any OpenAI-compatible LLM endpoint and it
-  becomes a real LLM planner (falls back to the built-in on-device director without one).
-- **Agent 2 — the material finder.** Auto-fetches open-license **music** (matching your prompt,
-  licensed via Openverse — keyless public API) and **card art** for intro/outro titles.
-- **Result screen** — the finished edit, ready to watch and export. Manual trim/crop/keyframe
-  tools still exist behind the ⚙ button for people who want them.
-- **Export** — real MP4 (H.264 + AAC) rendered fully on-device via MediaCodec at 1080p/720p/480p.
-- New adaptive icon, locked landscape, immersive UI, no accounts, nothing uploaded to us.
+- **ChatCut workspace** — chat panel (left) + GL preview, transport and multitrack
+  timeline (right). You type what you want ("cut to the beats, warm grade, vertical"),
+  the agent calls real tools, and the timeline changes live.
+- **Tool catalog (`ToolKit`)** — mirrors OpenChatCut's agent tool names where the
+  same capability is possible on-device: `read_timeline`, `probe_media`, `detect_scenes`,
+  `detect_beats`, `search_stock_media`, `download_media`, `manage_media_pool`, `add_clip`,
+  `add_audio`, `add_clip`, `edit_item`, `set_item_timing`, `split_item`, `move_item`,
+  `duplicate_item`, `remove_item` (ripple), `manage_captions`, `manage_markers`,
+  `manage_effects`/`apply_effect`, `set_aspect_ratio`, `auto_grade`, `manage_versions`,
+  `undo_last_change`/`redo_last_change`, `read_script`/`apply_script`, `manage_projects`,
+  `submit_export`/`check_export`, plus `_af` extensions (`match_edit`, `remove_silence`,
+  `find_highlights`, `sync_cuts`, `auto_edit`, `generate_image`).
+- **Agent brain** — any OpenAI-compatible endpoint in 🧠 (tool-calling loop with a
+  step cap). Without a brain the built-in **offline skills** still handle fixed intents
+  (music, grades, aspect, beat cuts, one-tap auto edit, export…).
+- **Two agents under the hood** (kept from v0.3): the deterministic Director auto-builds
+  full edits from a prompt, and the Materials finder fetches open-license music/card art.
+- **Manual editor** — the full pro editor (cut/crop/keyframes/motion graph) remains one
+  ⚙ press away.
+- **Export** — real MP4 (H.264 + AAC) on-device via MediaCodec, incl. vertical presets.
+- New installable debug-signed release APK, adaptive icon, landscape immersive.
 
 The server/ImGui/CLI side (Studio REST API, SSE events, `afctl`, OpenCode skill) remains a
-separate, fully supported integration path.
+separate, fully supported integration path — external agents drive `afctl`/Studio ops the
+same way the in-app chat agent drives ToolKit tools.
 
 ## Docs
 

@@ -387,7 +387,7 @@ private fun HelpPanel() {
 }
 
 @Composable
-private fun ExportDialog(store: ProjectStore, service: ExportService, onDismiss: () -> Unit) {
+fun ExportDialog(store: ProjectStore, service: ExportService, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var preset by remember { mutableStateOf(Exporter.P720) }

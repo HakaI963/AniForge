@@ -11,14 +11,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dev.aniforge.domain.ProjectStore
-import dev.aniforge.ui.AgentScreen
 import dev.aniforge.ui.EditorScreen
+import dev.aniforge.ui.WorkspaceScreen
 import dev.aniforge.ui.theme.AniForgeTheme
 
 /**
- * AniForge Studio — AI auto-editor (landscape, immersive).
- * AgentScreen = import + prompt + ⚡AUTO EDIT (agents cut/fetch/build) ·
- * EditorScreen = result playback + ⚙ for pro tools when wanted.
+ * AniForge ChatCut — agent-native video editor (landscape, immersive).
+ * WorkspaceScreen = chat agent + preview + multitrack timeline (OpenChatCut port);
+ * the ⚙ button opens the full manual editor for hands-on control.
  */
 class MainActivity : ComponentActivity() {
 
@@ -36,11 +36,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             AniForgeTheme(dark = true) {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    var screen by remember { mutableStateOf("agent") }
+                    var screen by remember { mutableStateOf("chat") }
                     when (screen) {
-                        "agent" -> AgentScreen(store) { screen = "result" }
-                        "result" -> EditorScreen(store, onExit = { screen = "agent" }, simple = true)
-                        else -> EditorScreen(store, onExit = { screen = "agent" }, simple = false)
+                        "chat" -> WorkspaceScreen(store, onOpenPro = { screen = "pro" })
+                        else -> EditorScreen(store, onExit = { screen = "chat" }, simple = false)
                     }
                 }
             }
