@@ -7,6 +7,7 @@ import dev.aniforge.domain.CropMode
 import dev.aniforge.domain.EditAnalysis
 import dev.aniforge.domain.Editor
 import dev.aniforge.domain.KeyPoint
+import dev.aniforge.domain.MediaProbe
 import dev.aniforge.domain.MotionTrack
 import dev.aniforge.domain.Project
 import dev.aniforge.domain.ProjectStore
