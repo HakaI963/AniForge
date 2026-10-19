@@ -465,7 +465,7 @@ class Exporter(private val context: Context) {
             }
 
             while (framePos < totalFrames && !canceled.get() && !eos) {
-                val want = min(blockFrames, totalFrames - framePos).toInt()
+                val want = min(blockFrames.toLong(), totalFrames - framePos).toInt()
                 val frames = mixer.readBlock(pcm, framePos, want, spec, canceled)
                 if (frames <= 0) break
                 val slots = frames * chans
