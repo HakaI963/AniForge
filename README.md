@@ -7,10 +7,10 @@ keyframes, effects, markers) ** onto:
 | Piece | Where | What |
 |---|---|---|
 | **Studio engine + REST API** | `server/` | Python FastAPI. Pure ops: project-in → project-out + events; `ops` for cuts, speed ramps, chroma key, JP text cards, crop presets, "flash frame", markers. SSE `/events` for the live monitor feed. |
-| **Android app** (APK) | `app/` | Kotlin + Jetpack Compose. Project editor + agent console hitting the same API via HTTPS. |
+| **Android app** (APK) | `app/` | **AniForge Studio** — full on-device editor (Compose): multi-track timeline, cut/crop, keyframes + motion graph, color, titles, auto-edit, real MP4 export. |
 | **Agent CLI** | `cli/afctl` | `afctl` — stdlib only, agent-first CLI that maps any "edit like this" intent onto ops. |
 | **ImGui Forge Console** | `console/` | Dear ImGui C++ desktop viewer for the same project — timeline canvas, agent feed, FX panel, prompt box. |
-| **AniList material catalog** | `app/data/AniListApi` | Anime trending titles exposed to editors as anime material. |
+| **AniList material catalog** | `server/` (Studio API) | Anime trending titles exposed to editors as anime material. |
 | **Examples** | `examples/demo.osp`, `examples/ops.demo.json` | Ready-to-run baseline timeline and an edit ops payload. |
 | **CI** | `.github/workflows/` | `server.yml` (pytest), `android.yml` (APK), `console.yml` (ImGui binary), `release.yml` (tag publish). |
 
@@ -46,11 +46,29 @@ see [`skills/aniforge-edit/SKILL.md`] — OpenCode plans cuts/effects/texts, sub
 `/health`, `/schema`, `/project/validate`, `/edit/apply`, `/clip/{add,move,cut,speed,text,crop,render}`,
 `/project/render`, `/render/{id}`, `/analyze`, `/events` (SSE), `/events/recent`.
 
-## Android app (APK from Actions)
+## Android app — AniForge Studio (full on-device editor)
 
-The APK job builds a debug arm64 artifact. Load a demo project, point the app's Studio URL
-at your server (`http://10.0.2.2:8787` when running via the emulator), and orchestrate the
-same ops the agent does.  Material list flows from AniList trending (via GraphQL).
+`app/` is now a **complete standalone video editor** that ships as an installable APK and does
+not require the server at all:
+
+- **Timeline** — multi-track (V1 / V2 / music), drag to move, drag edge handles to trim,
+  split / duplicate / delete at the playhead, zoomable ruler + scrubbing, undo/redo.
+- **Cut & trim** — frame-accurate source trims (`in`/`out`), beat-aligned splitting.
+- **Crop / SNS ratios** — free letterbox or fill 1:1 / 4:5 / 9:16 / 16:9 with pan + zoom
+  windows (the crop feeds both preview and the exporter).
+- **Keyframes + motion graph** — add/move/delete keyframes on a draggable curve per property:
+  scale, rotation, position X/Y, opacity, volume, brightness (easing: linear / smooth / in / out).
+- **Color** — warm / cool / noir / pastel / vivid grades + brightness/contrast/saturation.
+- **Text** — per-clip title overlay (color, size), baked into the exported MP4.
+- **Auto-edit (one-tap)** — *Match edit: same cut rhythm, own footage* (analyzes any reference
+  video's scene cuts & rebuilds your clip on that rhythm), *beat cut* (chops on the music's RMS
+  peaks), flash-on-cut, crossfades, ken-burns push-ins, SNS 4:5 pack, soft/pastel pack.
+- **Export** — a real MP4 (H.264 + AAC) rendered on-device with MediaCodec: 1080p / 720p / 480p
+  presets, shareable from the app. Everything renders locally; no upload.
+- **Landscape, immersive, new adaptive icon** — built to be used one-handed on a phone.
+
+The older server-coupled flow (Studio REST API, AniList material, agent console) still lives in
+`server/`, `console/` and `cli/` and remains fully supported.
 
 ## Docs
 
