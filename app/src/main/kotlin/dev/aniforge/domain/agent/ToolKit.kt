@@ -1,7 +1,6 @@
 package dev.aniforge.domain.agent
 
 import android.content.Context
-import dev.aniforge.domain.AutoEdit
 import dev.aniforge.domain.Clip
 import dev.aniforge.domain.ClipIdGen
 import dev.aniforge.domain.CropMode
@@ -16,6 +15,7 @@ import dev.aniforge.domain.Prop
 import dev.aniforge.domain.Project
 import dev.aniforge.domain.ProjectStore
 import dev.aniforge.domain.newProject
+import dev.aniforge.engine.AutoEdit
 import dev.aniforge.engine.Exporter
 import dev.aniforge.engine.ExportService
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +44,7 @@ import kotlin.math.min
  */
 class ToolKit(
     private val context: Context,
-    private val store: ProjectStore,
+    val store: ProjectStore,
     val exportService: ExportService? = null,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -58,8 +58,8 @@ class ToolKit(
         val name: String,
         val desc: String,
         val params: String, // JSON schema for the `parameters` field
-        val run: suspend (args: JsonObject) -> String,
         val read: Boolean = false,
+        val run: suspend (args: JsonObject) -> String,
     )
 
     /** Registers a media URI in the pool (the UI importer uses this for named refs like clip1). */

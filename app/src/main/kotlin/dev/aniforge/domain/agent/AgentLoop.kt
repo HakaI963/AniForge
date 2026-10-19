@@ -6,6 +6,7 @@ import dev.aniforge.domain.Llm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -14,11 +15,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.JsonObjectSerializer
 import kotlinx.serialization.json.contentOrNull
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.math.abs
 
 sealed class AgentEvent {
     /** who: user | agent | sys */
@@ -161,7 +160,7 @@ open class AgentLoop(
             put("tools", toolsArr)
             put("temperature", 0.4)
         }
-        return json.encodeToString(JsonObjectSerializer, body)
+        return json.encodeToString(JsonElement.serializer(), body)
     }
 
     private fun httpJson(cfg: Llm.Config, body: String): String {
